@@ -1,0 +1,38 @@
+﻿@page "/resources/{state:int}"
+@inject HttpClient Http
+
+<PageTitle>Ресурсы</PageTitle>
+
+<h1>Ресурсы</h1>
+
+@* @if (forecasts == null) { *@
+@*     <p> *@
+@*         <em>Загрузка...</em> *@
+@*     </p> *@
+@* } else { *@
+@*     <table class="table-bordered"> *@
+@*         <thead> *@
+@*         <tr> *@
+@*             <th>Наименование</th> *@
+@*         </tr> *@
+@*         </thead> *@
+@*         <tbody> *@
+@*         @foreach (var forecast in forecasts) { *@
+@*             <tr> *@
+@*                 <td>@forecast.Date.ToShortDateString()</td> *@
+@*             </tr> *@
+@*         } *@
+@*         </tbody> *@
+@*     </table> *@
+@* } *@
+
+@code {
+    [Parameter] 
+    public int State { get; set; }
+    
+    // private WeatherForecast[]? forecasts;
+    //
+    // protected override async Task OnInitializedAsync() {
+    //     forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
+    // }
+}
