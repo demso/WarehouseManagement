@@ -11,4 +11,9 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.8" PrivateAssets="all"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\WarehouseManagement.Contracts\WarehouseManagement.Contracts.csproj" />
+      <ProjectReference Include="..\WarehouseManagement.Domain\WarehouseManagement.Domain.csproj" />
+    </ItemGroup>
+
 </Project>

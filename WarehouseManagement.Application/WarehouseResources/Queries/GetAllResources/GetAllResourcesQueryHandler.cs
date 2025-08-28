@@ -12,7 +12,9 @@ public class GetAllResourcesQueryHandler(IWarehouseDbContext dbContext)
     public override async Task<IEnumerable<WarehouseResource>> Handle(GetAllResourcesQuery request, 
         CancellationToken cancellationToken) {
         
-        List<WarehouseResource> resources = await _dbContext.WarehouseResources.ToListAsync(cancellationToken);
+        List<WarehouseResource> resources = await _dbContext.WarehouseResources
+            .Where(x => x.State.Equals(request.State))
+            .ToListAsync(cancellationToken);
 
         return resources;
     }

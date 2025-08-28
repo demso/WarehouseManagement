@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\WarehouseManagement.Application\WarehouseManagement.Application.csproj" />
+      <ProjectReference Include="..\WarehouseManagement.Contracts\WarehouseManagement.Contracts.csproj" />
       <ProjectReference Include="..\WarehouseManagement.Persistence\WarehouseManagement.Persistence.csproj" />
     </ItemGroup>
 

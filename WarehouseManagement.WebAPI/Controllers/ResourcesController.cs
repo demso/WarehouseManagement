@@ -3,9 +3,10 @@ using WarehouseManagement.Application.WarehouseResources.Commands.CreateResource
 using WarehouseManagement.Application.WarehouseResources.Commands.RemoveResource;
 using WarehouseManagement.Application.WarehouseResources.Commands.UpdateResource;
 using WarehouseManagement.Application.WarehouseResources.Queries.GetAllResources;
+using WarehouseManagement.Application.WarehouseResources.Queries.GetResource;
+using WarehouseManagement.Contracts.Models.WarehouseResource;
 using WarehouseManagement.Domain;
 using WarehouseManagement.WebAPI.Models;
-using WarehouseManagement.WebAPI.Models.WarehouseResource;
 
 namespace WarehouseManagement.WebAPI.Controllers;
 
@@ -15,10 +16,22 @@ public class ResourcesController : AbstractController {
     /// Возвращает информацию обо всех имеющихся ресурсах на складе
     /// </summary>
     /// <returns>Список ресурсов</returns>
-    [HttpGet("{state:int}")]
-    public async Task<ActionResult<IEnumerable<WarehouseResource>>> Get() {
-        GetAllResourcesQuery command = new();
+    [HttpGet("{state}")]
+    public async Task<ActionResult<IEnumerable<WarehouseResource>>> GetAll([FromQuery] string state) {
+        WorkingState workingState = Enum.Parse<WorkingState>(state);
+        GetAllResourcesQuery command = new() {
+            State = workingState
+        };
         IEnumerable<WarehouseResource> result = await Mediator.Send(command);
+        return Ok(result);
+    }
+    
+    [HttpGet("{id:Guid}")]
+    public async Task<ActionResult<IEnumerable<WarehouseResource>>> Get([FromQuery] Guid id) {
+        GetResourceQuery command = new() {
+            Id = id
+        };
+        WarehouseResource result = await Mediator.Send(command);
         return Ok(result);
     }
 
