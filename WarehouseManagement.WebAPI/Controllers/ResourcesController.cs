@@ -6,19 +6,19 @@ using WarehouseManagement.Application.WarehouseResources.Queries.GetAllResources
 using WarehouseManagement.Application.WarehouseResources.Queries.GetResource;
 using WarehouseManagement.Contracts.Models.WarehouseResource;
 using WarehouseManagement.Domain;
-using WarehouseManagement.WebAPI.Models;
 
 namespace WarehouseManagement.WebAPI.Controllers;
 
-[Route("api/[controller]")]
+[Route("/api/[controller]/[action]")]
+[Produces("application/json")]
 public class ResourcesController : AbstractController {
     /// <summary>
     /// Возвращает информацию обо всех имеющихся ресурсах на складе
     /// </summary>
     /// <returns>Список ресурсов</returns>
     [HttpGet("{state}")]
-    public async Task<ActionResult<IEnumerable<WarehouseResource>>> GetAll([FromQuery] string state) {
-        WorkingState workingState = Enum.Parse<WorkingState>(state);
+    public async Task<ActionResult<IEnumerable<WarehouseResource>>> GetAll(string state) {
+        WorkingState workingState = Enum.Parse<WorkingState>(state, true);
         GetAllResourcesQuery command = new() {
             State = workingState
         };
@@ -27,7 +27,7 @@ public class ResourcesController : AbstractController {
     }
     
     [HttpGet("{id:Guid}")]
-    public async Task<ActionResult<IEnumerable<WarehouseResource>>> Get([FromQuery] Guid id) {
+    public async Task<ActionResult<IEnumerable<WarehouseResource>>> Get(Guid id) {
         GetResourceQuery command = new() {
             Id = id
         };

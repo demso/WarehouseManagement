@@ -1,0 +1,6 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+@route = http://localhost:80/api
+
+### Получить все рабочие ресурсы (State = Working)
+GET {{route}}/Resources/all
+Accept: application/json

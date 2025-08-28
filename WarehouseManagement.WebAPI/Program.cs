@@ -1,9 +1,10 @@
-using System.Reflection;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Serilog;
+using Serilog.Events;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
+using System.Reflection;
+using System.Text.Json.Serialization;
 using WarehouseManagement.Application;
 using WarehouseManagement.Application.Interfaces;
 using WarehouseManagement.Persistence;
@@ -34,10 +35,29 @@ services.AddSerilog((servicess, lc) => lc
         "[{@t:HH:mm:ss} {@l:u3}{#if @tr is not null} ({substring(@tr,0,4)}:{substring(@sp,0,4)}){#end}] {SourceContext} \n{@m}\n{@x}",
         theme: TemplateTheme.Code)));
 
+services.AddCors(options => options.AddPolicy("AllowAll", policy =>
+{
+    policy.AllowAnyHeader();
+    policy.AllowAnyMethod();
+    policy.AllowAnyOrigin();
+}));
+
 var app = builder.Build();
 
 await app.InitializeDatabase();
+
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0} ms";
+    options.GetLevel = (httpContext, _, ex) => ex != null
+        ? LogEventLevel.Error
+        : httpContext.Response.StatusCode > 499
+            ? LogEventLevel.Error
+            : LogEventLevel.Information;
+});
+app.UseCors("AllowAll");
 app.UseExceptionHandlerMiddleware();
+app.MapControllers();
 
 DisplayRoutes(app);
 

@@ -1,0 +1,202 @@
+﻿@page "/resources/form"
+@page "/resources/form/{id:guid}"
+
+@using WarehouseManagement.Contracts.Models.WarehouseResource
+@using WarehouseManagement.Domain
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>@(IsNew ? "Новый ресурс" : "Ресурс")</PageTitle>
+
+<h1>@(IsNew ? "Новый ресурс" : "Ресурс")</h1>
+
+<EditForm Model="@resourceModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="name" class="form-label">Наименование:</label>
+        <InputText id="name" class="form-control" @bind-Value="resourceModel.Name" />
+        <ValidationMessage For="@(() => resourceModel.Name)" />
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+
+    <button type="submit" class="btn btn-primary me-2">Сохранить</button>
+
+    @if (!IsNew)
+    {
+        <button type="button" class="btn @(resourceModel.State == WorkingState.Archived ? "btn-success" : "btn-warning") me-2" @onclick="ToggleState">
+            @(resourceModel.State == WorkingState.Archived ? "В работу" : "В архив")
+        </button>
+        <button type="button" class="btn btn-danger" @onclick="Delete">Удалить</button>
+    }
+    <button type="button" class="btn btn-secondary ms-2" @onclick="GoBack">Назад</button>
+</EditForm>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsNew => !Id.HasValue;
+    // Модель для формы. Для нового - Create DTO, для редактирования - Update DTO, но мы можем использовать один класс или создать модель представления.
+    // Для простоты используем UpdateResourceDto, так как оно позволяет null значения.
+    private UpdateResourceDto resourceModel = new() { Name = string.Empty, State = WorkingState.Working };
+    private string errorMessage = string.Empty;
+    private WorkingState originalState = WorkingState.Working; // Чтобы знать, куда возвращаться
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsNew)
+        {
+            try
+            {
+                // Получаем данные ресурса для редактирования
+                var resourceDto = await Http.GetFromJsonAsync<WarehouseResourceDto>($"api/resources/{Id.Value}");
+                if (resourceDto != null)
+                {
+                    // Заполняем модель данными из DTO
+                    resourceModel.Name = resourceDto.Name ?? string.Empty;
+                    resourceModel.State = resourceDto.State;
+                    originalState = resourceDto.State; // Запоминаем исходное состояние
+                }
+                else
+                {
+                    errorMessage = "Ресурс не найден.";
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Ошибка загрузки ресурса: {ex}");
+                errorMessage = "Ошибка при загрузке данных ресурса.";
+            }
+        }
+        else
+        {
+             // Для нового ресурса по умолчанию состояние Working
+             resourceModel.State = WorkingState.Working;
+             originalState = WorkingState.Working;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        errorMessage = string.Empty;
+        try
+        {
+            if (IsNew)
+            {
+                // Создаем DTO для создания
+                var createDto = new CreateResourceDto { Name = resourceModel.Name!, State = resourceModel.State ?? WorkingState.Working };
+                var response = await Http.PostAsJsonAsync("api/resources", createDto);
+                if (response.IsSuccessStatusCode)
+                {
+                    var newResourceId = await response.Content.ReadFromJsonAsync<Guid>();
+                    Console.WriteLine($"Ресурс создан с ID: {newResourceId}");
+                }
+                else
+                {
+                     // Попробуем получить сообщение об ошибке
+                     var errorContent = response.StatusCode + " content: " + await response.Content.ReadAsStringAsync();
+                     errorMessage = $"Ошибка создания: {errorContent}";
+                     return; // Не переходим назад, если ошибка
+                }
+            }
+            else if (Id.HasValue)
+            {
+                // Создаем DTO для обновления
+                var updateDto = new UpdateResourceDto { Name = resourceModel.Name, State = resourceModel.State };
+                var response = await Http.PatchAsJsonAsync($"api/resources/{Id.Value}", updateDto);
+                 if (response.IsSuccessStatusCode)
+                {
+                     Console.WriteLine("Ресурс обновлён.");
+                }
+                else
+                {
+                     // Попробуем получить сообщение об ошибке
+                     var errorContent = await response.Content.ReadAsStringAsync();
+                     errorMessage = $"Ошибка обновления: {errorContent}";
+                     return; // Не переходим назад, если ошибка
+                }
+            }
+            GoBack(); // Перенаправляем на список после успешного сохранения
+        }
+        catch (HttpRequestException httpEx)
+        {
+            Console.Error.WriteLine($"Ошибка HTTP при сохранении ресурса: {httpEx}");
+            errorMessage = $"Ошибка сети: {httpEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Ошибка сохранения ресурса: {ex}");
+            errorMessage = "Произошла ошибка при сохранении.";
+        }
+    }
+
+
+    private async Task ToggleState()
+    {
+        if (!Id.HasValue || resourceModel.State == null) return;
+
+        try
+        {
+            var newState = resourceModel.State == WorkingState.Archived ? WorkingState.Working : WorkingState.Archived;
+            // Обновляем только состояние
+            var updateDto = new UpdateResourceDto { State = newState };
+            var response = await Http.PatchAsJsonAsync($"api/resources/{Id.Value}", updateDto);
+            if (response.IsSuccessStatusCode)
+            {
+                resourceModel.State = newState;
+                originalState = newState; // Обновляем исходное состояние после изменения
+                Console.WriteLine($"Состояние ресурса изменено на {newState}.");
+                StateHasChanged(); // Обновляем UI
+            }
+            else
+            {
+                 var errorContent = await response.Content.ReadAsStringAsync();
+                 errorMessage = $"Ошибка изменения состояния: {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Ошибка изменения состояния ресурса: {ex}");
+            errorMessage = "Ошибка при изменении состояния ресурса.";
+        }
+    }
+
+    private async Task Delete()
+    {
+        if (!Id.HasValue) return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/resources/{Id.Value}");
+            if(response.IsSuccessStatusCode)
+            {
+                 Console.WriteLine("Ресурс удалён.");
+                 GoBack(); // Перенаправляем на список после удаления
+            }
+            else
+            {
+                 var errorContent = await response.Content.ReadAsStringAsync();
+                 errorMessage = $"Ошибка удаления: {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Ошибка удаления ресурса: {ex}");
+            errorMessage = "Ошибка при удалении ресурса.";
+        }
+    }
+
+    private void GoBack()
+    {
+        // Определяем, на какую страницу ресурсов возвращаться, основываясь на исходном состоянии ресурса
+        var backState = originalState == WorkingState.Archived ? 2 : 1;
+        Navigation.NavigateTo($"/resources/{backState}");
+    }
+}
