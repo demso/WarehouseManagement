@@ -1,0 +1,18 @@
+﻿.notification-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1050;
+    width: 300px;
+}
+
+.toast {
+    margin-bottom: 0.5rem;
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.toast.hide {
+    opacity: 0;
+}
+

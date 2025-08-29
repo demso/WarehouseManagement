@@ -7,7 +7,7 @@ using WarehouseManagement.Domain;
 namespace WarehouseManagement.WebAPI.Mappings;
 
 public class WarehousResourceMappings : Profile {
-    protected WarehousResourceMappings() {
+    public WarehousResourceMappings() {
         CreateMap<WarehouseResource, WarehouseResourceDto>();
         CreateMap<UpdateResourceDto, UpdateResourceCommand>();
         CreateMap<CreateResourceDto, CreateResourceCommand>();

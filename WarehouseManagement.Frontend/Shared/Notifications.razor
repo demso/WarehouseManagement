@@ -1,0 +1,56 @@
+﻿@using WarehouseManagement.Frontend.Models
+@using WarehouseManagement.Frontend.Services
+@inject INotificationManager NotificationManager
+@implements IDisposable
+
+<div class="notification-container">
+    @foreach (var notification in _notifications)
+    {
+        <div class="toast show @(GetCssClass(notification.Type))" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body">
+                @notification.Message
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<NotificationModel> _notifications = new();
+
+    protected override void OnInitialized()
+    {
+        NotificationManager.OnNotificationAdded += AddNotification;
+        NotificationManager.OnNotificationRemoved += RemoveNotification;
+    }
+
+    public void Dispose()
+    {
+        NotificationManager.OnNotificationAdded -= AddNotification;
+        NotificationManager.OnNotificationRemoved -= RemoveNotification;
+    }
+
+    private void AddNotification(NotificationModel notification)
+    {
+        _notifications.Add(notification);
+        StateHasChanged(); // Обновляем UI
+    }
+
+    private void RemoveNotification(Guid id)
+    {
+        var notification = _notifications.FirstOrDefault(n => n.Id == id);
+        if (notification != null)
+        {
+            _notifications.Remove(notification);
+            StateHasChanged(); // Обновляем UI
+        }
+    }
+
+    private string GetCssClass(NotificationType type) => type switch
+    {
+        NotificationType.Success => "bg-success text-white",
+        NotificationType.Error => "bg-danger text-white",
+        NotificationType.Warning => "bg-warning text-dark",
+        NotificationType.Info => "bg-info text-dark",
+        _ => "bg-primary text-white"
+    };
+}

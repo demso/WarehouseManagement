@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Npgsql;
 
 namespace WarehouseManagement.WebAPI.Middleware;
 
@@ -48,38 +49,37 @@ namespace WarehouseManagement.WebAPI.Middleware;
         private void ProcessException(Exception exception, ref HttpStatusCode code, ref string message)
         {
             Exception? realException = ExceptionDiver(exception);
-        
-            // switch (exception)
-            // {
-            //     case ValidationException validationException:
-            //         code = HttpStatusCode.BadRequest;
-            //         message = validationException.Errors.First().ToString();
-            //         break;
-            //     case NotFoundException:
-            //         code = HttpStatusCode.NotFound;
-            //         break;
-            //     case TransferException:
-            //         if (realException is not null && CheckIfDbConcurrencyAccessException(realException))
-            //             code = HttpStatusCode.Conflict;
-            //         break;
-            // }
-            //
-            // switch (realException)
-            // {
-            //     case UserInBlockListException:
-            //         code = HttpStatusCode.Conflict;
-            //         message = "Счета пользователя заблокированы";
-            //         break;
-            //     case BadRequestException:
-            //         code = HttpStatusCode.BadRequest;
-            //         message = realException.Message;
-            //         break;
-            // }
-        }
-    
-        private static bool CheckIfDbConcurrencyAccessException(Exception ex)
+
+        // switch (exception)
+        // {
+        //     case ValidationException validationException:
+        //         code = HttpStatusCode.BadRequest;
+        //         message = validationException.Errors.First().ToString();
+        //         break;
+        //     case NotFoundException:
+        //         code = HttpStatusCode.NotFound;
+        //         break;
+        //     case TransferException:
+        //         if (realException is not null && CheckIfDbConcurrencyAccessException(realException))
+        //             code = HttpStatusCode.Conflict;
+        //         break;
+        // }
+        //
+        switch (realException)
         {
-            return ex.Message.Contains("40001: could not serialize");
+            case PostgresException:
+                if (CheckIfUniqueConstraintViolation(realException))
+                {
+                    code = HttpStatusCode.BadRequest;
+                    message = "[DUPLICATE] Value already exists in database";
+                }
+                break;
+        }
+    }
+
+        private bool CheckIfUniqueConstraintViolation(Exception ex)
+        {
+            return ex.Message.Contains("23505");
         }
 
         /// <summary>

@@ -4,7 +4,6 @@ using Serilog.Events;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 using System.Reflection;
-using System.Text.Json.Serialization;
 using WarehouseManagement.Application;
 using WarehouseManagement.Application.Interfaces;
 using WarehouseManagement.Persistence;
@@ -19,8 +18,8 @@ var configuration = builder.Configuration;
 services
     .AddApplication()
     .AddPersistence(configuration)
-    .AddControllers()
-    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    .AddControllers();
+   // .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 services.AddAutoMapper(config => {
     config.AddMaps(Assembly.GetExecutingAssembly());

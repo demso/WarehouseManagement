@@ -14,5 +14,8 @@ public class UpdateResourceCommandValidator : AbstractValidator<UpdateResourceCo
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Name or WorkingState is required for update")
             .When(x => x.State is null);
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .When(x => x.Name is not null);
     }
 }

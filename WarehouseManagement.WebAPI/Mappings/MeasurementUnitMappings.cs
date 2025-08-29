@@ -8,7 +8,7 @@ using WarehouseManagement.WebAPI.Models.MeasurementUnit;
 namespace WarehouseManagement.WebAPI.Mappings;
 
 public class MeasurementUnitMappings : Profile {
-    protected MeasurementUnitMappings() {
+    public MeasurementUnitMappings() {
         CreateMap<MeasurementUnit, MeasurementUnitDto>();
         CreateMap<CreateMeasurementUnitDto, CreateMeasurementUnitCommand>();
         CreateMap<UpdateMeasurementUnitDto, UpdateMeasurementUnitCommand>();

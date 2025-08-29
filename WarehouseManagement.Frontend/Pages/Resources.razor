@@ -1,78 +1,95 @@
-﻿@page "/resources/{state:int}"
+﻿@page "/resources/{stateSegment}"
 @using WarehouseManagement.Contracts.Models.WarehouseResource
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageTitle>@(State == 1 ? "Ресурсы" : "Архивные ресурсы")</PageTitle>
+<PageTitle>@(IsArchived ? "Архивные ресурсы" : "Ресурсы")</PageTitle>
 
-<h1>@(State == 1 ? "Ресурсы" : "Архивные ресурсы")</h1>
+<h1>@(IsArchived ? "Архивные ресурсы" : "Ресурсы")</h1>
 
-@if (State == 1) // Кнопки только на странице рабочих ресурсов
-{
-    <div class="mb-3">
-        <button class="btn btn-primary me-2" @onclick="GoToAdd">Добавить</button>
-        <button class="btn btn-secondary" @onclick="GoToArchived">К архивным</button>
-    </div>
-}
-else if (State == 2) // Кнопка "К рабочим" на странице архивных ресурсов
-{
-    <div class="mb-3">
-        <button class="btn btn-secondary" @onclick="GoToWorking">К рабочим</button>
-    </div>
-}
-
-@if (resources == null)
+@if (IsLoading)
 {
     <p><em>Загрузка...</em></p>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Наименование</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (resources.Any())
-            {
+    @if (!IsArchived) // Кнопки только на странице рабочих ресурсов
+    {
+        <div class="mb-3">
+            <button class="btn btn-primary me-2" @onclick="GoToAdd">Добавить</button>
+            <button class="btn btn-secondary" @onclick="GoToArchived">К архивным</button>
+        </div>
+    }
+    else // Кнопка "К рабочим" на странице архивных ресурсов
+    {
+        <div class="mb-3">
+            <button class="btn btn-secondary" @onclick="GoToWorking">К рабочим</button>
+        </div>
+    }
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+    else if (resources == null || !resources.Any())
+    {
+        <p><em>Ресурсы не найдены.</em></p>
+    }
+    else
+    {
+        <table class="table-bordered">
+            <thead>
+                <tr>
+                    <th>Наименование</th>
+                </tr>
+            </thead>
+            <tbody>
                 @foreach (var resource in resources)
                 {
                     <tr @onclick="() => GoToEdit(resource.Id)" style="cursor: pointer;">
                         <td>@resource.Name</td>
                     </tr>
                 }
-            }
-            else
-            {
-                <tr>
-                    <td colspan="1">Ресурсы не найдены.</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    }
 }
 
 @code {
-    [Parameter] public int State { get; set; } // 1 - Working, 2 - Archived
+    [Parameter] public string stateSegment { get; set; } = string.Empty;
 
+    private bool IsArchived => string.Equals(stateSegment, "archived", StringComparison.OrdinalIgnoreCase);
     private List<WarehouseResourceDto>? resources;
+    private bool IsLoading = true;
+    private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        // Сброс состояния при изменении параметра
+        resources = null;
+        errorMessage = null;
+        IsLoading = true;
+        StateHasChanged(); // Обновляем UI, чтобы показать "Загрузка..."
+
         try
         {
-            // Определяем состояние для запроса к API (1 -> Working, 2 -> Archived)
-            var apiState = State;
-            resources = await Http.GetFromJsonAsync<List<WarehouseResourceDto>>($"api/resources/{apiState}") ?? new();
+            // Определяем состояние для запроса к API
+            var apiState = IsArchived ? "Archived" : "Working"; // Передаем строковое значение
+            resources = await Http.GetFromJsonAsync<List<WarehouseResourceDto>>($"api/resources/getall/{apiState}") ?? new();
         }
         catch (Exception ex)
         {
-            // TODO: Обработка ошибок (например, показ сообщения пользователю)
+            errorMessage = $"Ошибка загрузки ресурсов: {ex.Message}";
             Console.Error.WriteLine($"Ошибка загрузки ресурсов: {ex}");
-            resources = new List<WarehouseResourceDto>(); // Или показать сообщение об ошибке
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
+
 
     private void GoToAdd()
     {
@@ -81,12 +98,12 @@ else
 
     private void GoToArchived()
     {
-        Navigation.NavigateTo("/resources/2");
+        Navigation.NavigateTo("/resources/archived");
     }
 
     private void GoToWorking()
     {
-         Navigation.NavigateTo("/resources/1");
+        Navigation.NavigateTo("/resources/working");
     }
 
     private void GoToEdit(Guid id)
