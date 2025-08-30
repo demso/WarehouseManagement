@@ -13,39 +13,38 @@
 
 <h1>@(IsNew ? "Новый ресурс" : "Ресурс")</h1>
 
-@if (isLoading)
+@if (_isLoading)
 {
     <p><em>Загрузка...</em></p>
 }
 else
 {
-    <EditForm Model="@resourceModel" OnValidSubmit="HandleValidSubmit">
+    <EditForm Model="@_resourceModel" OnValidSubmit="HandleValidSubmit">
         <DataAnnotationsValidator />
         <ValidationSummary />
-
-        <div class="mb-3">
-            <label for="name" class="form-label">Наименование:</label>
-            <InputText id="name" class="form-control" @bind-Value="resourceModel.Name" />
-            <ValidationMessage For="@(() => resourceModel.Name)" />
-        </div>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger" role="alert">
-                @errorMessage
-            </div>
-        }
-
         <button type="submit" class="btn btn-primary me-2">Сохранить</button>
 
         @if (!IsNew)
         {
-            <button type="button" class="btn @(resourceModel.State == WorkingState.Archived ? "btn-success" : "btn-warning") me-2" @onclick="ToggleState">
-                @(resourceModel.State == WorkingState.Archived ? "В работу" : "В архив")
+            <button type="button" class="btn @(_resourceModel.State == WorkingState.Archived ? "btn-success" : "btn-warning") me-2" @onclick="ToggleState">
+                @(_resourceModel.State == WorkingState.Archived ? "В работу" : "В архив")
             </button>
             <button type="button" class="btn btn-danger" @onclick="Delete">Удалить</button>
         }
         <button type="button" class="btn btn-secondary ms-2" @onclick="GoBack">Назад</button>
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Наименование:</label>
+            <InputText id="name" class="form-control" @bind-Value="_resourceModel.Name" />
+            <ValidationMessage For="@(() => _resourceModel.Name)" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @_errorMessage
+            </div>
+        }
     </EditForm>
 }
 
@@ -53,106 +52,101 @@ else
     [Parameter] public Guid? Id { get; set; }
 
     private bool IsNew => !Id.HasValue;
-    private WarehouseResource resourceModel;
-    private string errorMessage = string.Empty;
-    private bool isLoading = true;
-    private WorkingState originalState = WorkingState.Working; // Чтобы знать, куда возвращаться
+    private WarehouseResource _resourceModel = null!;
+    private string _errorMessage = string.Empty;
+    private bool _isLoading;
+    private WorkingState _originalState;
 
     protected override async Task OnParametersSetAsync()
     {
         // Сброс состояния при изменении параметра
-        resourceModel = new WarehouseResource { Id = Id ?? Guid.Empty, Name = string.Empty, State = WorkingState.Working };
-        errorMessage = string.Empty;
-        isLoading = true;
-        originalState = WorkingState.Working;
+        _resourceModel = new WarehouseResource { Id = Id ?? Guid.Empty, Name = string.Empty, State = WorkingState.Working };
+        _errorMessage = string.Empty;
+        _isLoading = true;
+        _originalState = WorkingState.Working;
 
         if (!IsNew)
         {
             try
             {
-                var resourceDto = await Http.GetFromJsonAsync<WarehouseResourceDto>($"api/resources/get/{Id.Value}");
+                var resourceDto = await Http.GetFromJsonAsync<WarehouseResourceDto>($"api/resources/get/{Id!.Value}");
                 if (resourceDto != null)
                 {
-                    resourceModel.Name = resourceDto.Name;
-                    resourceModel.State = resourceDto.State;
-                    originalState = resourceDto.State;
+                    _resourceModel.Name = resourceDto.Name;
+                    _resourceModel.State = resourceDto.State;
+                    _originalState = resourceDto.State;
                 }
                 else
                 {
-                    errorMessage = "Ресурс не найден.";
+                    _errorMessage = "Ресурс не найден.";
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogError("Ошибка загрузки ресурса: {Exception}", ex);
-                errorMessage = "Ошибка при загрузке данных ресурса.";
+                _errorMessage = "Ошибка при загрузке данных ресурса.";
             }
         }
         else
         {
-            resourceModel.State = WorkingState.Working;
-            originalState = WorkingState.Working;
+            _resourceModel.State = WorkingState.Working;
+            _originalState = WorkingState.Working;
         }
-        isLoading = false;
+        _isLoading = false;
     }
       
     private async Task HandleValidSubmit()
     {
-        errorMessage = string.Empty;
+        _errorMessage = string.Empty;
         try
         {
             HttpResponseMessage response;
+            if (IsEmpty(_resourceModel.Name))
+            {
+                NotificationManager.ShowError("Ошибка", "Наименование не должно быть пустым");
+                return;
+            }
             if (IsNew)
             {
-                if (IsEmpty(resourceModel.Name))
-                {
-                    NotificationManager.ShowError("Ошибка", "Наименование не должно быть пустым");
-                    return;
-                }
-                var createDto = new CreateResourceDto { Name = resourceModel.Name, State = resourceModel.State };
+                var createDto = new CreateResourceDto { Name = _resourceModel.Name, State = _resourceModel.State };
                 response = await Http.PostAsJsonAsync("api/resources/add", createDto);
             }
             else if (Id.HasValue)
             {
-                if (IsEmpty(resourceModel.Name))
-                {
-                    NotificationManager.ShowError("Ошибка", "Наименование не должно быть пустым");
-                    return;
-                }
-                var updateDto = new UpdateResourceDto { Id = Id.Value, Name = resourceModel.Name, State = null };
+                var updateDto = new UpdateResourceDto { Id = Id.Value, Name = _resourceModel.Name, State = null };
                 response = await Http.PatchAsJsonAsync($"api/resources/update/{Id.Value}", updateDto);
             }
             else
             {
-                errorMessage = "Неверное состояние формы.";
-                NotificationManager.ShowError("Ошибка", errorMessage); // Уведомление об ошибке
+                _errorMessage = "Неверное состояние формы.";
+                NotificationManager.ShowError("Ошибка", _errorMessage);
                 return;
             }
 
             if (response.IsSuccessStatusCode)
             {
-                NotificationManager.ShowSuccess("Успех", IsNew ? "Ресурс создан успешно!" : "Ресурс обновлён успешно!"); // Уведомление об успехе
+                NotificationManager.ShowSuccess("Успех", IsNew ? "Ресурс создан успешно!" : "Ресурс обновлён успешно!");
                 GoBack();
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 var apiErrorMessage = GetMessageFromApiError(errorContent);
-                errorMessage = $"Ошибка API: {response.StatusCode} - {apiErrorMessage}";
-                NotificationManager.ShowError("Ошибка API", errorMessage); // Уведомление об ошибке API
+                _errorMessage = $"Ошибка API: {response.StatusCode} - {apiErrorMessage}";
+                NotificationManager.ShowError("Ошибка API", _errorMessage);
             }
         }
         catch (HttpRequestException httpEx)
         {
-            Logger.LogError($"Ошибка HTTP при сохранении ресурса: {httpEx}");
-            errorMessage = $"Ошибка сети: {httpEx.Message}";
-            NotificationManager.ShowError("Ошибка сети", errorMessage); // Уведомление об ошибке сети
+            Logger.LogError("Ошибка HTTP при сохранении ресурса: {HttpRequestException}", httpEx);
+            _errorMessage = $"Ошибка сети: {httpEx.Message}";
+            NotificationManager.ShowError("Ошибка сети", _errorMessage);
         }
         catch (Exception ex)
         {
-            Logger.LogError($"Ошибка сохранения ресурса: {ex}");
-            errorMessage = "Произошла ошибка при сохранении.";
-            NotificationManager.ShowError("Ошибка", errorMessage); // Уведомление об общей ошибке
+            Logger.LogError("Ошибка сохранения ресурса: {Exception}", ex);
+            _errorMessage = "Произошла ошибка при сохранении.";
+            NotificationManager.ShowError("Ошибка", _errorMessage);
         }
     }
 
@@ -161,15 +155,15 @@ else
         if (!Id.HasValue) return;
         try
         {
-            var newState = resourceModel.State == WorkingState.Archived ? WorkingState.Working : WorkingState.Archived;
+            var newState = _resourceModel.State == WorkingState.Archived ? WorkingState.Working : WorkingState.Archived;
             var updateDto = new UpdateResourceDto { Id = Id.Value, Name = null, State = newState };
             var response = await Http.PatchAsJsonAsync($"api/resources/update/{Id.Value}", updateDto);
 
             if (response.IsSuccessStatusCode)
             {
-                resourceModel.State = newState;
-                originalState = newState;
-                Logger.LogInformation($"Состояние ресурса изменено на {newState}.");
+                _resourceModel.State = newState;
+                _originalState = newState;
+                Logger.LogInformation("Состояние ресурса изменено на {WorkingState}.", newState);
                 NotificationManager.ShowSuccess("Успех", $"Состояние ресурса изменено на {(newState == WorkingState.Working ? "Рабочий" : "Архивный")}.");
                 StateHasChanged();
             }
@@ -177,15 +171,15 @@ else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 var apiErrorMessage = GetMessageFromApiError(errorContent);
-                errorMessage = $"Ошибка изменения состояния: {response.StatusCode} - {apiErrorMessage}";
-                NotificationManager.ShowError("Ошибка", errorMessage); // Уведомление об ошибке изменения состояния
+                _errorMessage = $"Ошибка изменения состояния: {response.StatusCode} - {apiErrorMessage}";
+                NotificationManager.ShowError("Ошибка", _errorMessage);
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError($"Ошибка изменения состояния ресурса: {ex}");
-            errorMessage = "Ошибка при изменении состояния ресурса.";
-            NotificationManager.ShowError("Ошибка", errorMessage); // Уведомление об ошибке
+            Logger.LogError("Ошибка изменения состояния ресурса: {Exception}", ex);
+            _errorMessage = "Ошибка при изменении состояния ресурса.";
+            NotificationManager.ShowError("Ошибка", _errorMessage);
         }
     }
 
@@ -205,28 +199,27 @@ else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 var apiErrorMessage = GetMessageFromApiError(errorContent);
-                errorMessage = $"Ошибка удаления: {response.StatusCode} - {apiErrorMessage}";
-                NotificationManager.ShowError("Ошибка", errorMessage); // Уведомление об ошибке удаления
+                _errorMessage = $"Ошибка удаления: {response.StatusCode} - {apiErrorMessage}";
+                NotificationManager.ShowError("Ошибка", _errorMessage);
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError($"Ошибка удаления ресурса: {ex}");
-            errorMessage = "Ошибка при удалении ресурса.";
-            NotificationManager.ShowError("Ошибка", errorMessage); // Уведомление об ошибке
+            Logger.LogError("Ошибка удаления ресурса: {Exception}", ex);
+            _errorMessage = "Ошибка при удалении ресурса.";
+            NotificationManager.ShowError("Ошибка", _errorMessage);
         }
     }
 
     private void GoBack()
     {
-        // Определяем, на какую страницу ресурсов возвращаться, основываясь на исходном состоянии ресурса
-        var backStateSegment = originalState == WorkingState.Archived ? "archived" : "working";
+        var backStateSegment = _originalState == WorkingState.Archived ? "archived" : "working";
         Navigation.NavigateTo($"/resources/{backStateSegment}");
     }
 
     private string GetMessageFromApiError(string errorContent)
     {
-        string apiErrorMessage = errorContent; // Сообщение по умолчанию
+        string apiErrorMessage = errorContent;
 
         try
         {
@@ -248,7 +241,7 @@ else
         return apiErrorMessage;
     }
 
-    private bool IsEmpty(string s)
+    private static bool IsEmpty(string s)
     {
         return s.Trim().Length == 0;
     }

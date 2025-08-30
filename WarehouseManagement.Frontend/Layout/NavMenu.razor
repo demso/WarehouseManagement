@@ -1,22 +1,24 @@
-﻿<div class="nav-item px-3">
-    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-        <span class="bi bi-house-door-fill" aria-hidden="true"></span> Главная
-    </NavLink>
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Управление складом</a>
+    </div>
 </div>
-<div class="nav-item px-3">
-    <NavLink class="nav-link" href="/resources/working">
-        <!-- Обновленная ссылка -->
-        <span class="bi bi-box-seam" aria-hidden="true"></span> Справочники
-        <ul class="nav flex-column ms-3">
-            <li class="nav-item">
-                <NavLink class="nav-link" href="/resources/working">
-                    <!-- Обновленная ссылка -->
-                    Ресурсы
-                </NavLink>
-            </li>
-            <!-- Добавьте другие справочники здесь, если нужно -->
-        </ul>
-    </NavLink>
+
+<div>
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <h4 style="color:white">Склад</h4>
+            @* <a href="/balances" class="nav-link active" aria-current="page">Баланс</a>> *@
+            <a href="/receipts" class="nav-link">Поступления</a>
+            @* <a href="/shipments" class="nav-link">Отгрузки</a> *@
+        </div>
+        <div class="nav-item px-3">
+            <h4 style="color:white" >Справочники</h4>
+            @* <a href="/clients/1" class="nav-link">Клиенты</a> *@
+            <a href="/units/working" class="nav-link">Единицы измерения</a>
+            <a href="/resources/working" class="nav-link">Ресурсы</a>
+        </div>
+    </nav>
 </div>
 
 @code {
