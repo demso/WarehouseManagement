@@ -3,7 +3,6 @@ using WarehouseManagement.Application.MeasurementUnits.Commands.CreateMeasuremen
 using WarehouseManagement.Application.MeasurementUnits.Commands.UpdateMeasurementUnit;
 using WarehouseManagement.Contracts.Models.MeasurementUnit;
 using WarehouseManagement.Domain;
-using WarehouseManagement.WebAPI.Models.MeasurementUnit;
 
 namespace WarehouseManagement.WebAPI.Mappings;
 

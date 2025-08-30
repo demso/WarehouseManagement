@@ -1,9 +1,7 @@
-﻿using AutoMapper;
-using WarehouseManagement.Domain;
+﻿using WarehouseManagement.Domain;
 
-namespace WarehouseManagement.WebAPI.Models.MeasurementUnit;
+namespace WarehouseManagement.Contracts.Models.MeasurementUnit;
 
-[AutoMap(typeof(Domain.MeasurementUnit))]
 public class MeasurementUnitDto {
     public Guid Id { get; set; }
     public string Name { get; set; }
